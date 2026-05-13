@@ -1,10 +1,17 @@
+print("🔥 SERVER STARTED")
+print("ENV FIREBASE_KEY:", bool(os.environ.get("FIREBASE_KEY")))
 from flask import Flask
 import os
 import json
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-firebase_config = json.loads(os.environ["FIREBASE_KEY"])
+ffirebase_config_raw = os.environ.get("FIREBASE_KEY")
+
+if not firebase_config_raw:
+    raise Exception("FIREBASE_KEY not found in ENV")
+
+firebase_config = json.loads(firebase_config_raw)
 
 cred = credentials.Certificate(firebase_config)
 firebase_admin.initialize_app(cred)
