@@ -2,13 +2,19 @@ from flask import Flask, request, redirect
 import os
 import json
 
+import firebase_admin
 from firebase_admin import credentials, firestore
 from firebase_admin.firestore import Increment
 
 app = Flask(__name__)
 
 # ---------------- FIREBASE (STRICT MODE) ----------------
-firebase_config = json.loads(os.environ["FIREBASE_KEY"])
+firebase_config_raw = os.environ.get("FIREBASE_KEY")
+
+if not firebase_config_raw:
+    raise Exception("FIREBASE_KEY is missing in Render Environment Variables")
+
+firebase_config = json.loads(firebase_config_raw)
 
 cred = credentials.Certificate(firebase_config)
 firebase_admin.initialize_app(cred)
