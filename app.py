@@ -1,0 +1,156 @@
+from flask import Flask, request, redirect
+import firebase_admin
+from firebase_admin import credentials, firestore, Increment
+
+app = Flask(__name__)
+
+# ---------------- FIREBASE ----------------
+cred = credentials.Certificate("firebase-key.json")
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+
+# ---------------- HOME (добавить команды) ----------------
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if request.method == "POST":
+        name = request.form.get("team")
+
+        if name:
+            db.collection("teams").document(name).set({
+                "points": 0,
+                "wins": 0,
+                "draws": 0,
+                "losses": 0
+            })
+
+        return redirect("/")
+
+    return """
+    <h1>⚽ Добавить команду</h1>
+
+    <form method="POST">
+        <input name="team" placeholder="Название команды">
+        <button>Добавить</button>
+    </form>
+
+    <br>
+    <a href="/match">Матчи</a> |
+    <a href="/table">Таблица</a>
+    """
+
+
+# ---------------- MATCH ----------------
+@app.route("/match", methods=["GET", "POST"])
+def match():
+    teams = [doc.id for doc in db.collection("teams").stream()]
+
+    if request.method == "POST":
+        t1 = request.form.get("team1")
+        t2 = request.form.get("team2")
+        s1 = int(request.form.get("score1"))
+        s2 = int(request.form.get("score2"))
+
+        # победа 1
+        if s1 > s2:
+            db.collection("teams").document(t1).update({
+                "points": Increment(3),
+                "wins": Increment(1)
+            })
+            db.collection("teams").document(t2).update({
+                "losses": Increment(1)
+            })
+
+        # победа 2
+        elif s2 > s1:
+            db.collection("teams").document(t2).update({
+                "points": Increment(3),
+                "wins": Increment(1)
+            })
+            db.collection("teams").document(t1).update({
+                "losses": Increment(1)
+            })
+
+        # ничья
+        else:
+            db.collection("teams").document(t1).update({
+                "points": Increment(1),
+                "draws": Increment(1)
+            })
+            db.collection("teams").document(t2).update({
+                "points": Increment(1),
+                "draws": Increment(1)
+            })
+
+        return redirect("/table")
+
+    options = "".join([f"<option>{t}</option>" for t in teams])
+
+    return f"""
+    <h1>⚽ Добавить матч</h1>
+
+    <form method="POST">
+        <select name="team1">{options}</select>
+        <select name="team2">{options}</select><br><br>
+
+        <input name="score1" placeholder="Голы 1">
+        <input name="score2" placeholder="Голы 2"><br><br>
+
+        <button>Сохранить</button>
+    </form>
+
+    <br>
+    <a href="/table">Таблица</a>
+    """
+
+
+# ---------------- TABLE ----------------
+@app.route("/table")
+def table():
+    docs = db.collection("teams").stream()
+
+    teams = []
+    for d in docs:
+        teams.append((d.id, d.to_dict()))
+
+    teams.sort(key=lambda x: x[1]["points"], reverse=True)
+
+    rows = ""
+    place = 1
+
+    for name, d in teams:
+        rows += f"""
+        <tr>
+            <td>{place}</td>
+            <td>{name}</td>
+            <td>{d['points']}</td>
+            <td>{d['wins']}</td>
+            <td>{d['draws']}</td>
+            <td>{d['losses']}</td>
+        </tr>
+        """
+        place += 1
+
+    return f"""
+    <h1>🏆 Турнирная таблица</h1>
+
+    <table border="1" cellpadding="8">
+        <tr>
+            <th>#</th>
+            <th>Команда</th>
+            <th>Очки</th>
+            <th>В</th>
+            <th>Н</th>
+            <th>П</th>
+        </tr>
+        {rows}
+    </table>
+
+    <br>
+    <a href="/">Команды</a> |
+    <a href="/match">Матчи</a>
+    """
+
+
+if __name__ == "__main__":
+    app.run()
