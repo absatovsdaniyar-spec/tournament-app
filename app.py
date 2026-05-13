@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect
+from flask import Flask
 import os
 import json
 
@@ -14,7 +14,10 @@ firebase_config_raw = os.environ.get("FIREBASE_KEY")
 if not firebase_config_raw:
     raise Exception("FIREBASE_KEY is missing in Render Environment Variables")
 
-firebase_config = json.loads(firebase_config_raw)
+try:
+    firebase_config = json.loads(firebase_config_raw)
+except Exception as e:
+    raise Exception(f"Firebase JSON error: {e}")
 
 cred = credentials.Certificate(firebase_config)
 firebase_admin.initialize_app(cred)
