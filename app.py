@@ -1,23 +1,10 @@
 from flask import Flask
 import os
 import json
-
 import firebase_admin
 from firebase_admin import credentials, firestore
-from firebase_admin.firestore import Increment
 
-app = Flask(__name__)
-
-# ---------------- FIREBASE (STRICT MODE) ----------------
-firebase_config_raw = os.environ.get("FIREBASE_KEY")
-
-if not firebase_config_raw:
-    raise Exception("FIREBASE_KEY is missing in Render Environment Variables")
-
-try:
-    firebase_config = json.loads(firebase_config_raw)
-except Exception as e:
-    raise Exception(f"Firebase JSON error: {e}")
+firebase_config = json.loads(os.environ["FIREBASE_KEY"])
 
 cred = credentials.Certificate(firebase_config)
 firebase_admin.initialize_app(cred)
