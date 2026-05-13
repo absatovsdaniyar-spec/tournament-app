@@ -1,16 +1,22 @@
 from flask import Flask, request, redirect
-import firebase_admin
-from firebase_admin import credentials, firestore, Increment
+import os
+import json
+
+from firebase_admin import credentials, firestore
+from firebase_admin.firestore import Increment
 
 app = Flask(__name__)
 
-# ---------------- FIREBASE ----------------
-cred = credentials.Certificate("firebase-key.json")
+# ---------------- FIREBASE (STRICT MODE) ----------------
+firebase_config = json.loads(os.environ["FIREBASE_KEY"])
+
+cred = credentials.Certificate(firebase_config)
 firebase_admin.initialize_app(cred)
+
 db = firestore.client()
 
 
-# ---------------- HOME (добавить команды) ----------------
+# ---------------- HOME ----------------
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
@@ -27,14 +33,13 @@ def index():
         return redirect("/")
 
     return """
-    <h1>⚽ Добавить команду</h1>
+    <h1>⚽ Турнир (Cloud Mode)</h1>
 
     <form method="POST">
-        <input name="team" placeholder="Название команды">
+        <input name="team" placeholder="Команда">
         <button>Добавить</button>
     </form>
 
-    <br>
     <a href="/match">Матчи</a> |
     <a href="/table">Таблица</a>
     """
@@ -51,7 +56,6 @@ def match():
         s1 = int(request.form.get("score1"))
         s2 = int(request.form.get("score2"))
 
-        # победа 1
         if s1 > s2:
             db.collection("teams").document(t1).update({
                 "points": Increment(3),
@@ -61,7 +65,6 @@ def match():
                 "losses": Increment(1)
             })
 
-        # победа 2
         elif s2 > s1:
             db.collection("teams").document(t2).update({
                 "points": Increment(3),
@@ -71,7 +74,6 @@ def match():
                 "losses": Increment(1)
             })
 
-        # ничья
         else:
             db.collection("teams").document(t1).update({
                 "points": Increment(1),
@@ -87,7 +89,7 @@ def match():
     options = "".join([f"<option>{t}</option>" for t in teams])
 
     return f"""
-    <h1>⚽ Добавить матч</h1>
+    <h1>⚽ Матч</h1>
 
     <form method="POST">
         <select name="team1">{options}</select>
@@ -99,7 +101,6 @@ def match():
         <button>Сохранить</button>
     </form>
 
-    <br>
     <a href="/table">Таблица</a>
     """
 
@@ -132,7 +133,7 @@ def table():
         place += 1
 
     return f"""
-    <h1>🏆 Турнирная таблица</h1>
+    <h1>🏆 Таблица (Cloud)</h1>
 
     <table border="1" cellpadding="8">
         <tr>
@@ -152,5 +153,6 @@ def table():
     """
 
 
+# ---------------- START ----------------
 if __name__ == "__main__":
     app.run()
