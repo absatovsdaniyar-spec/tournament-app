@@ -1,17 +1,25 @@
 print("🔥 SERVER STARTED")
-print("ENV FIREBASE_KEY:", bool(os.environ.get("FIREBASE_KEY")))
+
 from flask import Flask
 import os
 import json
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-ffirebase_config_raw = os.environ.get("FIREBASE_KEY")
+app = Flask(__name__)
+
+# ---------------- FIREBASE ----------------
+firebase_config_raw = os.environ.get("FIREBASE_KEY")
+
+print("ENV FIREBASE_KEY:", bool(firebase_config_raw))
 
 if not firebase_config_raw:
     raise Exception("FIREBASE_KEY not found in ENV")
 
-firebase_config = json.loads(firebase_config_raw)
+try:
+    firebase_config = json.loads(firebase_config_raw)
+except Exception as e:
+    raise Exception(f"Firebase JSON error: {e}")
 
 cred = credentials.Certificate(firebase_config)
 firebase_admin.initialize_app(cred)
@@ -19,7 +27,7 @@ firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 
-# ---------------- HOME ----------------
+# ---------------- HOME (ADD TEAM) ----------------
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
@@ -36,15 +44,15 @@ def index():
         return redirect("/")
 
     return """
-    <h1>⚽ Турнир (Cloud Mode)</h1>
-
+    <h1>⚽ Tournament</h1>
     <form method="POST">
-        <input name="team" placeholder="Команда">
-        <button>Добавить</button>
+        <input name="team" placeholder="Team name">
+        <button>Add</button>
     </form>
 
-    <a href="/match">Матчи</a> |
-    <a href="/table">Таблица</a>
+    <br>
+    <a href="/match">Match</a> |
+    <a href="/table">Table</a>
     """
 
 
@@ -61,50 +69,51 @@ def match():
 
         if s1 > s2:
             db.collection("teams").document(t1).update({
-                "points": Increment(3),
-                "wins": Increment(1)
+                "points": firestore.Increment(3),
+                "wins": firestore.Increment(1)
             })
             db.collection("teams").document(t2).update({
-                "losses": Increment(1)
+                "losses": firestore.Increment(1)
             })
 
         elif s2 > s1:
             db.collection("teams").document(t2).update({
-                "points": Increment(3),
-                "wins": Increment(1)
+                "points": firestore.Increment(3),
+                "wins": firestore.Increment(1)
             })
             db.collection("teams").document(t1).update({
-                "losses": Increment(1)
+                "losses": firestore.Increment(1)
             })
 
         else:
             db.collection("teams").document(t1).update({
-                "points": Increment(1),
-                "draws": Increment(1)
+                "points": firestore.Increment(1),
+                "draws": firestore.Increment(1)
             })
             db.collection("teams").document(t2).update({
-                "points": Increment(1),
-                "draws": Increment(1)
+                "points": firestore.Increment(1),
+                "draws": firestore.Increment(1)
             })
 
         return redirect("/table")
 
-    options = "".join([f"<option>{t}</option>" for t in teams])
+    options = "".join([f"<option value='{t}'>{t}</option>" for t in teams])
 
     return f"""
-    <h1>⚽ Матч</h1>
+    <h1>⚽ Match</h1>
 
     <form method="POST">
         <select name="team1">{options}</select>
         <select name="team2">{options}</select><br><br>
 
-        <input name="score1" placeholder="Голы 1">
-        <input name="score2" placeholder="Голы 2"><br><br>
+        <input name="score1" placeholder="Goals 1">
+        <input name="score2" placeholder="Goals 2"><br><br>
 
-        <button>Сохранить</button>
+        <button>Save</button>
     </form>
 
-    <a href="/table">Таблица</a>
+    <br>
+    <a href="/table">Table</a>
     """
 
 
@@ -113,46 +122,43 @@ def match():
 def table():
     docs = db.collection("teams").stream()
 
-    teams = []
-    for d in docs:
-        teams.append((d.id, d.to_dict()))
-
-    teams.sort(key=lambda x: x[1]["points"], reverse=True)
+    teams = [(d.id, d.to_dict()) for d in docs]
+    teams.sort(key=lambda x: x[1].get("points", 0), reverse=True)
 
     rows = ""
-    place = 1
+    i = 1
 
     for name, d in teams:
         rows += f"""
         <tr>
-            <td>{place}</td>
+            <td>{i}</td>
             <td>{name}</td>
-            <td>{d['points']}</td>
-            <td>{d['wins']}</td>
-            <td>{d['draws']}</td>
-            <td>{d['losses']}</td>
+            <td>{d.get('points', 0)}</td>
+            <td>{d.get('wins', 0)}</td>
+            <td>{d.get('draws', 0)}</td>
+            <td>{d.get('losses', 0)}</td>
         </tr>
         """
-        place += 1
+        i += 1
 
     return f"""
-    <h1>🏆 Таблица (Cloud)</h1>
+    <h1>🏆 Tournament Table</h1>
 
     <table border="1" cellpadding="8">
         <tr>
             <th>#</th>
-            <th>Команда</th>
-            <th>Очки</th>
-            <th>В</th>
-            <th>Н</th>
-            <th>П</th>
+            <th>Team</th>
+            <th>Points</th>
+            <th>W</th>
+            <th>D</th>
+            <th>L</th>
         </tr>
         {rows}
     </table>
 
     <br>
-    <a href="/">Команды</a> |
-    <a href="/match">Матчи</a>
+    <a href="/">Teams</a> |
+    <a href="/match">Match</a>
     """
 
 
