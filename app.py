@@ -2,12 +2,23 @@ from flask import Flask, request, redirect
 import firebase_admin
 from firebase_admin import credentials, firestore
 from urllib.parse import unquote
+import os
+import json
 
 app = Flask(__name__)
 
-# ---------------- FIREBASE ----------------
-cred = credentials.Certificate("serviceAccountKey.json")
-firebase_admin.initialize_app(cred)
+# ---------------- FIREBASE (FIXED FOR RENDER) ----------------
+firebase_config_raw = os.environ.get("FIREBASE_KEY")
+
+if not firebase_config_raw:
+    raise Exception("FIREBASE_KEY not found in ENV")
+
+firebase_config = json.loads(firebase_config_raw)
+
+cred = credentials.Certificate(firebase_config)
+
+if not firebase_admin._apps:
+    firebase_admin.initialize_app(cred)
 
 db = firestore.client()
 
@@ -105,11 +116,8 @@ def index():
 # ---------------- DELETE ----------------
 @app.route("/delete/<path:name>")
 def delete(name):
-
     name = unquote(name)
-
     db.collection("teams").document(name).delete()
-
     return redirect("/table")
 
 # ---------------- MATCH ----------------
@@ -138,19 +146,15 @@ def match():
         if not d1.exists or not d2.exists:
             return "❌ Команда не найдена"
 
-        data1 = d1.to_dict()
-        data2 = d2.to_dict()
-
-        # -------- helper update --------
+        # SAFE UPDATE FUNCTION
         def inc(ref, field, value):
-            old = ref.get().to_dict().get(field, 0)
+            data = ref.get().to_dict() or {}
+            old = data.get(field, 0)
             ref.update({field: old + value})
 
-        # голы
         inc(ref1, "голы", s1)
         inc(ref2, "голы", s2)
 
-        # результат
         if s1 > s2:
             inc(ref1, "очки", 3)
             inc(ref1, "победы", 1)
@@ -167,7 +171,6 @@ def match():
             inc(ref1, "ничьи", 1)
             inc(ref2, "ничьи", 1)
 
-        # лог матча
         db.collection("matches").add({
             "t1": t1,
             "t2": t2,
@@ -268,16 +271,19 @@ def matches():
     for m in docs:
         d = m.to_dict()
 
-        if d["s1"] > d["s2"]:
+        s1 = d.get("s1", 0)
+        s2 = d.get("s2", 0)
+
+        if s1 > s2:
             r = "Победа 1 🟢"
-        elif d["s2"] > d["s1"]:
+        elif s2 > s1:
             r = "Победа 2 🔴"
         else:
             r = "Ничья 🟡"
 
         html += f"""
         <div class="card">
-            <h2>{d['t1']} {d['s1']} - {d['s2']} {d['t2']}</h2>
+            <h2>{d.get('t1')} {s1} - {s2} {d.get('t2')}</h2>
             <p>{r}</p>
         </div>
         """
