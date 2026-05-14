@@ -1,4 +1,3 @@
-flask
+Flask
 firebase-admin
-google-cloud-firestore
 gunicorn
