@@ -7,54 +7,149 @@ import json
 
 app = Flask(__name__)
 
-# ---------------- FIREBASE (FIXED FOR RENDER) ----------------
-firebase_config_raw = os.environ.get("FIREBASE_KEY")
+# ---------------- FIREBASE ----------------
 
-if not firebase_config_raw:
-    raise Exception("FIREBASE_KEY not found in ENV")
-
-firebase_config = json.loads(firebase_config_raw)
+firebase_config = json.loads(os.environ["FIREBASE_KEY"])
 
 cred = credentials.Certificate(firebase_config)
 
-if not firebase_admin._apps:
-    firebase_admin.initialize_app(cred)
+firebase_admin.initialize_app(cred)
 
 db = firestore.client()
 
 # ---------------- STYLE ----------------
+
 STYLE = """
 <style>
-body{
+
+*{
     margin:0;
-    font-family:Arial;
-    background:#0f172a;
-    color:white;
+    padding:0;
+    box-sizing:border-box;
 }
 
-.container{max-width:1000px;margin:auto;padding:20px;}
+body{
+    font-family:Arial,sans-serif;
+
+    background:
+    radial-gradient(circle at top left,#1e3a8a 0%,transparent 30%),
+    radial-gradient(circle at bottom right,#7c3aed 0%,transparent 30%),
+    #0f172a;
+
+    color:white;
+    min-height:100vh;
+}
+
+.container{
+    max-width:1100px;
+    margin:auto;
+    padding:30px;
+}
+
+.topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:25px;
+    flex-wrap:wrap;
+    gap:15px;
+}
+
+.logo{
+    font-size:32px;
+    font-weight:bold;
+    color:#38bdf8;
+}
+
+.menu{
+    display:flex;
+    gap:15px;
+    flex-wrap:wrap;
+}
+
+.menu a{
+    color:white;
+    text-decoration:none;
+    transition:.2s;
+    font-weight:bold;
+}
+
+.menu a:hover{
+    color:#38bdf8;
+}
 
 .card{
-    background:#1e293b;
-    padding:20px;
-    border-radius:15px;
-    margin-bottom:15px;
+    background:rgba(30,41,59,.75);
+
+    backdrop-filter:blur(10px);
+
+    border:1px solid rgba(255,255,255,.08);
+
+    border-radius:22px;
+
+    padding:25px;
+
+    margin-bottom:20px;
+
+    box-shadow:
+    0 0 20px rgba(0,0,0,.35);
+}
+
+h1{
+    margin-bottom:20px;
+    font-size:32px;
 }
 
 input,select{
-    padding:10px;
-    margin:5px;
-    border-radius:10px;
+    width:100%;
+
+    padding:14px;
+
+    margin-top:10px;
+
     border:none;
+
+    border-radius:14px;
+
+    background:#0f172a;
+
+    color:white;
+
+    outline:none;
+
+    font-size:16px;
 }
 
 button{
-    padding:10px 15px;
-    border-radius:10px;
+    width:100%;
+
+    padding:14px;
+
+    margin-top:15px;
+
     border:none;
-    background:#22c55e;
+
+    border-radius:14px;
+
+    background:
+    linear-gradient(90deg,#06b6d4,#3b82f6);
+
     color:white;
+
+    font-size:16px;
+
+    font-weight:bold;
+
     cursor:pointer;
+
+    transition:.2s;
+}
+
+button:hover{
+    transform:scale(1.02);
+
+    box-shadow:
+    0 0 15px rgba(59,130,246,.5);
 }
 
 table{
@@ -62,65 +157,161 @@ table{
     border-collapse:collapse;
 }
 
-th,td{
-    padding:10px;
-    text-align:center;
-    border-bottom:1px solid #334155;
+th{
+    background:#1e293b;
+    color:#38bdf8;
+    padding:15px;
 }
 
-th{background:#334155;}
+td{
+    padding:14px;
+    text-align:center;
+    border-bottom:1px solid rgba(255,255,255,.05);
+}
 
-a{color:#38bdf8;text-decoration:none;margin-right:10px;}
+tr:hover{
+    background:rgba(255,255,255,.03);
+}
+
+.delete-btn{
+    color:#ef4444;
+    text-decoration:none;
+    font-weight:bold;
+    font-size:18px;
+
+    padding:4px 8px;
+
+    border-radius:8px;
+
+    transition:.2s;
+}
+
+.delete-btn:hover{
+    background:rgba(239,68,68,.15);
+}
+
+.match-card{
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    padding:20px;
+
+    border-radius:18px;
+
+    background:
+    linear-gradient(
+    135deg,
+    rgba(59,130,246,.15),
+    rgba(124,58,237,.15)
+    );
+
+    margin-top:15px;
+}
+
+.team{
+    font-size:22px;
+    font-weight:bold;
+}
+
+.score{
+    font-size:40px;
+    font-weight:bold;
+    color:#38bdf8;
+}
+
+.result{
+    margin-top:10px;
+    opacity:.8;
+}
+
 </style>
 """
 
+# ---------------- NAVBAR ----------------
+
+NAVBAR = """
+
+<div class="topbar">
+
+    <div class="logo">
+        ⚽ Cyber League
+    </div>
+
+    <div class="menu">
+        <a href="/">Главная</a>
+        <a href="/match">Матчи</a>
+        <a href="/table">Таблица</a>
+        <a href="/matches">История</a>
+    </div>
+
+</div>
+
+"""
+
 # ---------------- HOME ----------------
+
 @app.route("/", methods=["GET","POST"])
-def index():
+def home():
 
     if request.method == "POST":
-        name = request.form.get("team")
 
-        if name:
-            ref = db.collection("teams").document(name)
+        team = request.form.get("team")
+
+        if team:
+
+            ref = db.collection("teams").document(team)
 
             if not ref.get().exists:
+
                 ref.set({
-                    "очки": 0,
-                    "победы": 0,
-                    "ничьи": 0,
-                    "поражения": 0,
-                    "голы": 0
+                    "очки":0,
+                    "победы":0,
+                    "ничьи":0,
+                    "поражения":0,
+                    "голы":0
                 })
 
         return redirect("/")
 
-    return STYLE + """
+    return STYLE + f"""
+
     <div class="container">
+
+        {NAVBAR}
+
         <div class="card">
-            <h1>⚽ Турнир</h1>
+
+            <h1>Добавить команду</h1>
 
             <form method="POST">
-                <input name="team" placeholder="Команда">
+
+                <input name="team" placeholder="Название команды">
+
                 <button>Добавить</button>
+
             </form>
 
-            <br>
-            <a href="/match">Матчи</a>
-            <a href="/table">Таблица</a>
-            <a href="/matches">История</a>
         </div>
+
     </div>
+
     """
 
 # ---------------- DELETE ----------------
+
 @app.route("/delete/<path:name>")
 def delete(name):
+
     name = unquote(name)
+
     db.collection("teams").document(name).delete()
+
     return redirect("/table")
 
 # ---------------- MATCH ----------------
+
 @app.route("/match", methods=["GET","POST"])
 def match():
 
@@ -132,117 +323,174 @@ def match():
         t2 = request.form.get("team2")
 
         if t1 == t2:
-            return "❌ Нельзя выбрать одну и ту же команду"
+            return "❌ Нельзя выбрать одинаковые команды"
 
-        s1 = int(request.form.get("score1") or 0)
-        s2 = int(request.form.get("score2") or 0)
+        s1 = int(request.form.get("score1"))
+        s2 = int(request.form.get("score2"))
 
         ref1 = db.collection("teams").document(t1)
         ref2 = db.collection("teams").document(t2)
 
-        d1 = ref1.get()
-        d2 = ref2.get()
-
-        if not d1.exists or not d2.exists:
+        if not ref1.get().exists or not ref2.get().exists:
             return "❌ Команда не найдена"
 
-        # SAFE UPDATE FUNCTION
         def inc(ref, field, value):
-            data = ref.get().to_dict() or {}
-            old = data.get(field, 0)
-            ref.update({field: old + value})
 
-        inc(ref1, "голы", s1)
-        inc(ref2, "голы", s2)
+            data = ref.get().to_dict()
+
+            old = data.get(field,0)
+
+            ref.update({
+                field: old + value
+            })
+
+        # голы
+
+        inc(ref1,"голы",s1)
+        inc(ref2,"голы",s2)
+
+        # победа
 
         if s1 > s2:
-            inc(ref1, "очки", 3)
-            inc(ref1, "победы", 1)
-            inc(ref2, "поражения", 1)
+
+            inc(ref1,"очки",3)
+            inc(ref1,"победы",1)
+            inc(ref2,"поражения",1)
 
         elif s2 > s1:
-            inc(ref2, "очки", 3)
-            inc(ref2, "победы", 1)
-            inc(ref1, "поражения", 1)
+
+            inc(ref2,"очки",3)
+            inc(ref2,"победы",1)
+            inc(ref1,"поражения",1)
 
         else:
-            inc(ref1, "очки", 1)
-            inc(ref2, "очки", 1)
-            inc(ref1, "ничьи", 1)
-            inc(ref2, "ничьи", 1)
+
+            inc(ref1,"очки",1)
+            inc(ref2,"очки",1)
+
+            inc(ref1,"ничьи",1)
+            inc(ref2,"ничьи",1)
+
+        # история
 
         db.collection("matches").add({
-            "t1": t1,
-            "t2": t2,
-            "s1": s1,
-            "s2": s2
+            "t1":t1,
+            "t2":t2,
+            "s1":s1,
+            "s2":s2
         })
 
         return redirect("/matches")
 
-    options = "".join([f"<option value='{t}'>{t}</option>" for t in teams])
+    options = ""
+
+    for t in teams:
+        options += f"<option>{t}</option>"
 
     return STYLE + f"""
+
     <div class="container">
+
+        {NAVBAR}
+
         <div class="card">
-            <h1>⚽ Матч</h1>
+
+            <h1>Добавить матч</h1>
 
             <form method="POST">
-                <select name="team1">{options}</select>
-                <select name="team2">{options}</select><br>
+
+                <select name="team1">
+                    {options}
+                </select>
+
+                <select name="team2">
+                    {options}
+                </select>
 
                 <input name="score1" placeholder="Голы 1">
-                <input name="score2" placeholder="Голы 2"><br>
 
-                <button>Сохранить</button>
+                <input name="score2" placeholder="Голы 2">
+
+                <button>Сохранить матч</button>
+
             </form>
+
         </div>
+
     </div>
+
     """
 
 # ---------------- TABLE ----------------
+
 @app.route("/table")
 def table():
 
     docs = db.collection("teams").stream()
 
-    teams = [(d.id, d.to_dict()) for d in docs]
-    teams.sort(key=lambda x: x[1].get("очки",0), reverse=True)
+    teams = [(d.id,d.to_dict()) for d in docs]
+
+    teams.sort(
+        key=lambda x:x[1].get("очки",0),
+        reverse=True
+    )
 
     rows = ""
-    i = 1
+
+    pos = 1
 
     for name,d in teams:
 
         wins = d.get("победы",0)
         draws = d.get("ничьи",0)
         losses = d.get("поражения",0)
-        goals = d.get("голы",0)
-        points = d.get("очки",0)
 
         games = wins + draws + losses
 
         rows += f"""
+
         <tr>
-            <td>{i}</td>
+
+            <td>{pos}</td>
+
             <td>{name}</td>
+
             <td>{games}</td>
+
             <td>{wins}</td>
+
             <td>{draws}</td>
+
             <td>{losses}</td>
-            <td>{goals}</td>
-            <td>{points}</td>
-            <td><a href="/delete/{name}" style="color:red;">❌ удалить</a></td>
+
+            <td>{d.get("голы",0)}</td>
+
+            <td>{d.get("очки",0)}</td>
+
+            <td>
+                <a class="delete-btn" href="/delete/{name}">
+                    ✕
+                </a>
+            </td>
+
         </tr>
+
         """
-        i += 1
+
+        pos += 1
 
     return STYLE + f"""
+
     <div class="container">
+
+        {NAVBAR}
+
         <div class="card">
-            <h1>🏆 Таблица</h1>
+
+            <h1>🏆 Турнирная таблица</h1>
 
             <table>
+
                 <tr>
                     <th>#</th>
                     <th>Команда</th>
@@ -252,15 +500,21 @@ def table():
                     <th>Поражения</th>
                     <th>Голы</th>
                     <th>Очки</th>
-                    <th>Удалить</th>
+                    <th>X</th>
                 </tr>
+
                 {rows}
+
             </table>
+
         </div>
+
     </div>
+
     """
 
-# ---------------- MATCH HISTORY ----------------
+# ---------------- HISTORY ----------------
+
 @app.route("/matches")
 def matches():
 
@@ -269,35 +523,68 @@ def matches():
     html = ""
 
     for m in docs:
+
         d = m.to_dict()
 
-        s1 = d.get("s1", 0)
-        s2 = d.get("s2", 0)
+        if "s1" not in d or "s2" not in d:
+            continue
 
-        if s1 > s2:
-            r = "Победа 1 🟢"
-        elif s2 > s1:
-            r = "Победа 2 🔴"
+        if d["s1"] > d["s2"]:
+            result = "🟢 Победа первой команды"
+
+        elif d["s2"] > d["s1"]:
+            result = "🔴 Победа второй команды"
+
         else:
-            r = "Ничья 🟡"
+            result = "🟡 Ничья"
 
         html += f"""
-        <div class="card">
-            <h2>{d.get('t1')} {s1} - {s2} {d.get('t2')}</h2>
-            <p>{r}</p>
+
+        <div class="match-card">
+
+            <div class="team">
+                {d['t1']}
+            </div>
+
+            <div>
+
+                <div class="score">
+                    {d['s1']} : {d['s2']}
+                </div>
+
+                <div class="result">
+                    {result}
+                </div>
+
+            </div>
+
+            <div class="team">
+                {d['t2']}
+            </div>
+
         </div>
+
         """
 
     return STYLE + f"""
+
     <div class="container">
+
+        {NAVBAR}
+
         <div class="card">
+
             <h1>📜 История матчей</h1>
-            <a href="/">Главная</a>
+
+            {html}
+
         </div>
-        {html}
+
     </div>
+
     """
 
 # ---------------- RUN ----------------
+
 if __name__ == "__main__":
     app.run(debug=True)
