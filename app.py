@@ -13,7 +13,7 @@ cred = credentials.Certificate(firebase_config)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# ---------------- STYLE ----------------
+# ---------------- СТИЛЬ ----------------
 
 STYLE = """
 <style>
@@ -47,7 +47,7 @@ body{
 }
 
 .logo{
-    font-size:24px;
+    font-size:26px;
     font-weight:bold;
     color:#38bdf8;
 }
@@ -64,7 +64,6 @@ body{
     padding:6px 10px;
     background:rgba(255,255,255,0.05);
     border-radius:10px;
-    font-size:13px;
 }
 
 .card{
@@ -119,7 +118,7 @@ th{
 }
 
 .score{
-    font-size:24px;
+    font-size:26px;
     font-weight:bold;
     color:#38bdf8;
 }
@@ -139,8 +138,8 @@ th{
 @media(max-width:768px){
     .match-card{
         flex-direction:column;
-        gap:8px;
         text-align:center;
+        gap:8px;
     }
 }
 
@@ -149,21 +148,21 @@ th{
 <meta http-equiv="refresh" content="10">
 """
 
-# ---------------- NAV ----------------
+# ---------------- МЕНЮ ----------------
 
 NAV = """
 <div class="topbar">
-<div class="logo">⚽ UZYNAGASH LEAGUE</div>
+<div class="logo">⚽ Лига</div>
 <div class="menu">
-<a href="/">Home</a>
-<a href="/match">Match</a>
-<a href="/table">Table</a>
-<a href="/matches">History</a>
+<a href="/">Главная</a>
+<a href="/match">Матч</a>
+<a href="/table">Таблица</a>
+<a href="/matches">История</a>
 </div>
 </div>
 """
 
-# ---------------- HOME ----------------
+# ---------------- ГЛАВНАЯ ----------------
 
 @app.route("/", methods=["GET","POST"])
 def home():
@@ -172,11 +171,29 @@ def home():
         if team:
             ref = db.collection("teams").document(team)
             if not ref.get().exists:
-                ref.set({"очки":0,"победы":0,"ничьи":0,"поражения":0,"голы":0})
+                ref.set({
+                    "очки":0,
+                    "победы":0,
+                    "ничьи":0,
+                    "поражения":0,
+                    "голы":0
+                })
         return redirect("/")
-    return STYLE + f"<div class='container'>{NAV}<div class='card'><form method='POST'><input name='team' placeholder='Team'><button>Add</button></form></div></div>"
 
-# ---------------- MATCH ----------------
+    return STYLE + f"""
+    <div class="container">
+    {NAV}
+    <div class="card">
+    <h2>Добавить команду</h2>
+    <form method="POST">
+    <input name="team" placeholder="Название команды">
+    <button>Добавить</button>
+    </form>
+    </div>
+    </div>
+    """
+
+# ---------------- МАТЧ ----------------
 
 @app.route("/match", methods=["GET","POST"])
 def match():
@@ -192,34 +209,41 @@ def match():
         s2 = int(request.form.get("score2"))
 
         if t1 == t2:
-            return "same teams"
+            return "❌ Нельзя выбрать одинаковые команды"
 
-        # DUPLICATE CHECK
-        existing = db.collection("matches").where("t1","==",t1).where("t2","==",t2).stream()
-        for e in existing:
+        # защита от дубля
+        exists = db.collection("matches").where("t1","==",t1).where("t2","==",t2).stream()
+        for e in exists:
             d = e.to_dict()
             if d["s1"] == s1 and d["s2"] == s2:
-                return "duplicate match"
+                return "❌ Такой матч уже есть"
 
         r1 = db.collection("teams").document(t1)
         r2 = db.collection("teams").document(t2)
 
-        def add(r,f,v):
-            d=r.get().to_dict()
-            r.update({f:d.get(f,0)+v})
+        def add(team, field, val):
+            d = team.get().to_dict()
+            team.update({field: d.get(field,0)+val})
 
+        # голы
         add(r1,"голы",s1)
         add(r2,"голы",s2)
 
-        if s1>s2:
+        # результат
+        if s1 > s2:
             add(r1,"очки",3); add(r1,"победы",1); add(r2,"поражения",1)
-        elif s2>s1:
+        elif s2 > s1:
             add(r2,"очки",3); add(r2,"победы",1); add(r1,"поражения",1)
         else:
             add(r1,"очки",1); add(r2,"очки",1)
             add(r1,"ничьи",1); add(r2,"ничьи",1)
 
-        db.collection("matches").add({"t1":t1,"t2":t2,"s1":s1,"s2":s2})
+        db.collection("matches").add({
+            "t1":t1,
+            "t2":t2,
+            "s1":s1,
+            "s2":s2
+        })
 
         return redirect("/matches")
 
@@ -229,27 +253,30 @@ def match():
     <div class="container">
     {NAV}
     <div class="card">
+    <h2>Добавить матч</h2>
+
     <form method="POST">
     <select name="team1">{opts}</select>
     <select name="team2">{opts}</select>
-    <input type="number" name="score1">
-    <input type="number" name="score2">
-    <button>Save</button>
+
+    <input type="number" name="score1" placeholder="Голы 1">
+    <input type="number" name="score2" placeholder="Голы 2">
+
+    <button>Сохранить</button>
     </form>
+
     </div>
     </div>
     """
 
-# ---------------- DELETE ----------------
+# ---------------- УДАЛЕНИЕ ----------------
 
 @app.route("/delete/<id>")
 def delete(id):
-
     db.collection("matches").document(id).delete()
-
     return redirect("/matches")
 
-# ---------------- EDIT ----------------
+# ---------------- РЕДАКТИРОВАНИЕ (ИСПРАВЛЕНО) ----------------
 
 @app.route("/edit/<id>", methods=["GET","POST"])
 def edit(id):
@@ -260,79 +287,87 @@ def edit(id):
     if not m.exists:
         return redirect("/matches")
 
-    d = m.to_dict()
+    old = m.to_dict()
 
-    if request.method=="POST":
+    if request.method == "POST":
 
-        new1=int(request.form["s1"])
-        new2=int(request.form["s2"])
+        new1 = int(request.form["s1"])
+        new2 = int(request.form["s2"])
 
-        # rollback old
-        t1,t2=d["t1"],d["t2"]
-        s1,s2=d["s1"],d["s2"]
+        t1 = old["t1"]
+        t2 = old["t2"]
 
-        r1=db.collection("teams").document(t1)
-        r2=db.collection("teams").document(t2)
+        old1 = old["s1"]
+        old2 = old["s2"]
 
-        def sub(r,f,v):
-            d=r.get().to_dict()
-            r.update({f:d.get(f,0)-v})
+        r1 = db.collection("teams").document(t1)
+        r2 = db.collection("teams").document(t2)
 
-        def add(r,f,v):
-            d=r.get().to_dict()
-            r.update({f:d.get(f,0)+v})
+        d1 = r1.get().to_dict()
+        d2 = r2.get().to_dict()
 
-        sub(r1,"голы",s1); sub(r2,"голы",s2)
+        # откат старого
+        d1["голы"] -= old1
+        d2["голы"] -= old2
 
-        if s1>s2:
-            sub(r1,"очки",3); sub(r1,"победы",1); sub(r2,"поражения",1)
-        elif s2>s1:
-            sub(r2,"очки",3); sub(r2,"победы",1); sub(r1,"поражения",1)
+        if old1 > old2:
+            d1["очки"] -= 3; d1["победы"] -= 1; d2["поражения"] -= 1
+        elif old2 > old1:
+            d2["очки"] -= 3; d2["победы"] -= 1; d1["поражения"] -= 1
         else:
-            sub(r1,"очки",1); sub(r2,"очки",1)
-            sub(r1,"ничьи",1); sub(r2,"ничьи",1)
+            d1["очки"] -= 1; d2["очки"] -= 1
+            d1["ничьи"] -= 1; d2["ничьи"] -= 1
 
-        add(r1,"голы",new1)
-        add(r2,"голы",new2)
+        # новый результат
+        d1["голы"] += new1
+        d2["голы"] += new2
 
-        if new1>new2:
-            add(r1,"очки",3); add(r1,"победы",1); add(r2,"поражения",1)
-        elif new2>new1:
-            add(r2,"очки",3); add(r2,"победы",1); add(r1,"поражения",1)
+        if new1 > new2:
+            d1["очки"] += 3; d1["победы"] += 1; d2["поражения"] += 1
+        elif new2 > new1:
+            d2["очки"] += 3; d2["победы"] += 1; d1["поражения"] += 1
         else:
-            add(r1,"очки",1); add(r2,"очки",1)
-            add(r1,"ничьи",1); add(r2,"ничьи",1)
+            d1["очки"] += 1; d2["очки"] += 1
+            d1["ничьи"] += 1; d2["ничьи"] += 1
+
+        r1.set(d1)
+        r2.set(d2)
 
         ref.update({"s1":new1,"s2":new2})
 
         return redirect("/matches")
 
     return f"""
+    <div style="color:white;padding:20px">
+    <h2>Редактировать матч</h2>
     <form method="POST">
-    <input name="s1" value="{d['s1']}">
-    <input name="s2" value="{d['s2']}">
-    <button>Save</button>
+    <input name="s1" value="{old['s1']}">
+    <input name="s2" value="{old['s2']}">
+    <button>Сохранить</button>
     </form>
+    </div>
     """
 
-# ---------------- MATCHES ----------------
+# ---------------- ИСТОРИЯ ----------------
 
 @app.route("/matches")
 def matches():
 
-    docs=db.collection("matches").stream()
+    docs = db.collection("matches").stream()
 
-    html=""
+    html = ""
 
     for m in docs:
 
-        d=m.to_dict()
-        mid=m.id
+        d = m.to_dict()
+        mid = m.id
 
-        html+=f"""
+        html += f"""
         <div class="match-card">
         <div>{d['t1']}</div>
+
         <div class="score">{d['s1']}:{d['s2']}</div>
+
         <div>{d['t2']}</div>
 
         <div>
@@ -343,28 +378,36 @@ def matches():
         </div>
         """
 
-    return STYLE + f"<div class='container'>{NAV}<div class='card'>{html}</div></div>"
+    return STYLE + f"""
+    <div class="container">
+    {NAV}
+    <div class="card">
+    <h2>История матчей</h2>
+    {html}
+    </div>
+    </div>
+    """
 
-# ---------------- TABLE ----------------
+# ---------------- ТАБЛИЦА ----------------
 
 @app.route("/table")
 def table():
 
-    teams=[(t.id,t.to_dict()) for t in db.collection("teams").stream()]
+    teams = [(t.id,t.to_dict()) for t in db.collection("teams").stream()]
     teams.sort(key=lambda x:x[1].get("очки",0),reverse=True)
 
     rows=""
     i=1
 
-    for n,d in teams:
+    for name,d in teams:
 
-        g=d.get("победы",0)+d.get("ничьи",0)+d.get("поражения",0)
+        games = d.get("победы",0)+d.get("ничьи",0)+d.get("поражения",0)
 
-        rows+=f"""
+        rows += f"""
         <tr>
         <td>{i}</td>
-        <td>{n}</td>
-        <td>{g}</td>
+        <td>{name}</td>
+        <td>{games}</td>
         <td>{d.get("победы",0)}</td>
         <td>{d.get("ничьи",0)}</td>
         <td>{d.get("поражения",0)}</td>
@@ -375,20 +418,25 @@ def table():
         i+=1
 
     return STYLE + f"""
-    <div class='container'>
+    <div class="container">
     {NAV}
-    <div class='card'>
-    <div class='table-scroll'>
+    <div class="card">
+    <h2>Таблица</h2>
+
+    <div class="table-scroll">
     <table>
-    <tr><th>#</th><th>Team</th><th>Games</th><th>W</th><th>D</th><th>L</th><th>Goals</th><th>Points</th></tr>
+    <tr>
+    <th>#</th><th>Команда</th><th>Игры</th><th>Победы</th><th>Ничьи</th><th>Поражения</th><th>Голы</th><th>Очки</th>
+    </tr>
     {rows}
     </table>
     </div>
+
     </div>
     </div>
     """
 
 # ---------------- RUN ----------------
 
-if __name__=="__main__":
+if __name__ == "__main__":
     app.run(debug=True)
