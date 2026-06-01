@@ -152,7 +152,7 @@ th{
 
 NAV = """
 <div class="topbar">
-<div class="logo">⚽ Лига</div>
+<div class="logo">⚽ UZYNAGASH LEAGUE</div>
 <div class="menu">
 <a href="/">Главная</a>
 <a href="/match">Матч</a>
