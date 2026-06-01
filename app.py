@@ -2,6 +2,7 @@ from flask import Flask, request, redirect
 import firebase_admin
 from firebase_admin import credentials, firestore
 from urllib.parse import unquote
+from datetime import datetime
 import os
 import json
 
@@ -226,6 +227,17 @@ tr:hover{
     opacity:.8;
 }
 
+.table-wrapper{
+    overflow-x:auto;
+}
+
+@media(max-width:700px){
+    .container{padding:10px;}
+    .team{font-size:16px;}
+    .score{font-size:28px;}
+    .match-card{flex-direction:column;gap:10px;text-align:center;}
+}
+
 </style>
 """
 
@@ -236,7 +248,7 @@ NAVBAR = """
 <div class="topbar">
 
     <div class="logo">
-        ⚽ Cyber League
+        ⚽ UZYNAGASH LEAGUE
     </div>
 
     <div class="menu">
@@ -310,6 +322,46 @@ def delete(name):
 
     return redirect("/table")
 
+
+@app.route("/delete_match/<match_id>")
+def delete_match(match_id):
+
+    match_ref = db.collection("matches").document(match_id)
+    match = match_ref.get()
+
+    if not match.exists:
+        return redirect("/matches")
+
+    d = match.to_dict()
+
+    ref1 = db.collection("teams").document(d["t1"])
+    ref2 = db.collection("teams").document(d["t2"])
+
+    def dec(ref, field, value):
+        data = ref.get().to_dict()
+        ref.update({field: data.get(field,0) - value})
+
+    dec(ref1,"голы",d["s1"])
+    dec(ref2,"голы",d["s2"])
+
+    if d["s1"] > d["s2"]:
+        dec(ref1,"очки",3)
+        dec(ref1,"победы",1)
+        dec(ref2,"поражения",1)
+    elif d["s2"] > d["s1"]:
+        dec(ref2,"очки",3)
+        dec(ref2,"победы",1)
+        dec(ref1,"поражения",1)
+    else:
+        dec(ref1,"очки",1)
+        dec(ref2,"очки",1)
+        dec(ref1,"ничьи",1)
+        dec(ref2,"ничьи",1)
+
+    match_ref.delete()
+    return redirect("/matches")
+
+
 # ---------------- MATCH ----------------
 
 @app.route("/match", methods=["GET","POST"])
@@ -377,7 +429,8 @@ def match():
             "t1":t1,
             "t2":t2,
             "s1":s1,
-            "s2":s2
+            "s2":s2,
+            "created": datetime.utcnow()
         })
 
         return redirect("/matches")
