@@ -19,25 +19,133 @@ YEARS = ["2017","2016","2015","2014","2013","2012"]
 
 STYLE = """
 <style>
-body{font-family:system-ui;background:#0f172a;color:white;margin:0}
-.container{max-width:1100px;margin:auto;padding:15px}
-.card{background:rgba(255,255,255,0.05);padding:15px;border-radius:15px;margin-top:10px}
-a{color:white;text-decoration:none}
-button,input,select{width:100%;padding:10px;margin-top:5px;border-radius:10px;border:none}
-button{background:#3b82f6;color:white;font-weight:bold}
-.year-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.year-box{padding:20px;text-align:center;background:#1e293b;border-radius:12px}
-.top{display:flex;justify-content:space-between;align-items:center}
-.table{width:100%;border-collapse:collapse}
-th,td{padding:8px;text-align:center;border-bottom:1px solid #334155}
-.match{display:flex;justify-content:space-between;background:rgba(255,255,255,0.05);padding:10px;border-radius:10px;margin-top:8px}
-.score{font-size:22px;color:#38bdf8}
+
+body{
+    margin:0;
+    font-family:system-ui;
+    background:#0f172a;
+    color:white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+}
+
+/* главный контейнер */
+.container{
+    width:100%;
+    max-width:900px;
+    padding:20px;
+    text-align:center;
+}
+
+/* верхняя панель */
+.top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+
+/* карточки */
+.card{
+    background:rgba(255,255,255,0.06);
+    padding:20px;
+    border-radius:20px;
+    margin-top:15px;
+}
+
+/* ГОДА */
+.year-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:15px;
+    margin-top:20px;
+}
+
+/* кнопка года */
+.year-box{
+    background:#1e293b;
+    padding:35px 10px;
+    border-radius:18px;
+    font-size:24px;
+    font-weight:bold;
+    color:white;
+    text-decoration:none;
+    transition:0.2s;
+}
+
+.year-box:active{
+    transform:scale(0.95);
+}
+
+/* кнопки и инпуты */
+input,select,button{
+    width:100%;
+    padding:14px;
+    margin-top:10px;
+    border:none;
+    border-radius:12px;
+    font-size:16px;
+}
+
+button{
+    background:linear-gradient(90deg,#06b6d4,#3b82f6);
+    color:white;
+    font-weight:bold;
+}
+
+/* таблица */
+table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14px;
+}
+
+th,td{
+    padding:10px;
+    text-align:center;
+}
+
+th{
+    background:#1e293b;
+}
+
+/* матч карточка */
+.match{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:rgba(255,255,255,0.06);
+    padding:12px;
+    margin-top:10px;
+    border-radius:12px;
+}
+
+.score{
+    font-size:22px;
+    color:#38bdf8;
+    font-weight:bold;
+}
+
+/* мобильная адаптация */
+@media(max-width:600px){
+    .year-grid{
+        grid-template-columns:1fr;
+    }
+
+    .year-box{
+        font-size:28px;
+        padding:40px;
+    }
+}
+
 </style>
 """
 
 NAV = """
 <div class="top">
-<h2>⚽ League</h2>
+<h2>⚽ UZYNAGASH LEAGUE</h2>
 <a href="/">Годы</a>
 </div>
 """
