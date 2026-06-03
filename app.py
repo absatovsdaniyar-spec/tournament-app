@@ -176,16 +176,33 @@ def year_page(year):
 
     return STYLE + f"""
     <div class="container">
+
     {NAV}
+
     <div class="card">
     <h2>{year} г.р</h2>
+    </div>
 
-    <a href="/year/{year}/add-team">➕ Команды</a><br>
-    <a href="/year/{year}/match">⚽ Матчи</a><br>
-    <a href="/year/{year}/table">🏆 Таблица</a><br>
-    <a href="/year/{year}/matches">📜 История</a>
+    <div class="year-grid">
+
+        <a class="year-box" href="/year/{year}/add-team">
+        ➕ Команды
+        </a>
+
+        <a class="year-box" href="/year/{year}/match">
+        ⚽ Матчи
+        </a>
+
+        <a class="year-box" href="/year/{year}/table">
+        🏆 Таблица
+        </a>
+
+        <a class="year-box" href="/year/{year}/matches">
+        📜 История
+        </a>
 
     </div>
+
     </div>
     """
 
