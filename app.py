@@ -212,7 +212,7 @@ def year_page(year):
 def add_team(year):
 
     if request.method == "POST":
-        team = request.form["team"]
+       team = request.form["team"].strip()
 
         db.collection("teams").document(f"{year}_{team}").set({
             "name": team,
@@ -247,8 +247,8 @@ def match(year):
 
     if request.method == "POST":
 
-        t1 = request.form["team1"]
-        t2 = request.form["team2"]
+        t1 = request.form["team1"].strip()
+        t2 = request.form["team2"].strip()
         s1 = int(request.form["s1"])
         s2 = int(request.form["s2"])
 
@@ -265,9 +265,22 @@ def match(year):
         })
 
         def upd(team, field, val):
-            ref = db.collection("teams").document(f"{year}_{team}")
-            d = ref.get().to_dict()
-            ref.update({field:d.get(field,0)+val})
+ref = db.collection("teams").document(f"{year}_{team}")
+
+```
+doc = ref.get()
+
+if not doc.exists:
+    print(f"ОШИБКА: команда не найдена -> {year}_{team}")
+    return
+
+d = doc.to_dict() or {}
+
+ref.set({
+    field: d.get(field, 0) + val
+}, merge=True)
+```
+
 
         upd(t1,"голы",s1)
         upd(t2,"голы",s2)
