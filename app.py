@@ -211,6 +211,7 @@ def year_page(year):
 @app.route("/year/<year>/add-team", methods=["GET","POST"])
 def add_team(year):
 
+```
 if request.method == "POST":
     team = request.form["team"].strip()
 
@@ -224,22 +225,24 @@ if request.method == "POST":
         "голы": 0
     })
 
-        return redirect(f"/year/{year}")
+    return redirect(f"/year/{year}")
 
-    return STYLE + f"""
-    <div class="container">
-    {NAV}
-    <div class="card">
-    <h2>Добавить команду ({year})</h2>
+return STYLE + f"""
+<div class="container">
+{NAV}
+<div class="card">
+<h2>Добавить команду ({year})</h2>
 
-    <form method="POST">
-    <input name="team" placeholder="Название команды">
-    <button>Добавить</button>
-    </form>
+<form method="POST">
+<input name="team" placeholder="Название команды">
+<button>Добавить</button>
+</form>
 
-    </div>
-    </div>
-    """
+</div>
+</div>
+"""
+```
+
 
 # ---------------- MATCH ----------------
 
@@ -268,7 +271,7 @@ def match(year):
             "s2":s2
         })
 
-        def upd(team, field, val):
+def upd(team, field, val):
 ref = db.collection("teams").document(f"{year}_{team}")
 
 ```
@@ -283,7 +286,6 @@ d = doc.to_dict() or {}
 ref.set({
     field: d.get(field, 0) + val
 }, merge=True)
-```
 
 
         upd(t1,"голы",s1)
