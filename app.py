@@ -211,14 +211,18 @@ def year_page(year):
 @app.route("/year/<year>/add-team", methods=["GET","POST"])
 def add_team(year):
 
-    if request.method == "POST":
-       team = request.form["team"].strip()
+if request.method == "POST":
+    team = request.form["team"].strip()
 
-        db.collection("teams").document(f"{year}_{team}").set({
-            "name": team,
-            "year": year,
-            "очки":0,"победы":0,"ничьи":0,"поражения":0,"голы":0
-        })
+    db.collection("teams").document(f"{year}_{team}").set({
+        "name": team,
+        "year": year,
+        "очки": 0,
+        "победы": 0,
+        "ничьи": 0,
+        "поражения": 0,
+        "голы": 0
+    })
 
         return redirect(f"/year/{year}")
 
