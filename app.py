@@ -43,20 +43,28 @@ def recalc_table(year):
     for t in db.collection("teams").where("year", "==", year).stream():
         d = t.to_dict()
         teams[d["name"]] = {
-            "победы":0,"ничьи":0,"поражения":0,"голы":0,"очки":0
+            "победы": 0,
+            "ничьи": 0,
+            "поражения": 0,
+            "голы": 0,
+            "очки": 0
         }
 
     for m in db.collection("matches").where("year", "==", year).stream():
         d = m.to_dict()
-        t1,t2,s1,s2 = d["t1"],d["t2"],d["s1"],d["s2"]
-   print("КОМАНДЫ В БАЗЕ:", list(teams.keys()))
-   print("МАТЧ:", t1, t2)
+        t1, t2, s1, s2 = d["t1"], d["t2"], d["s1"], d["s2"]
+
+        print("КОМАНДЫ В БАЗЕ:", list(teams.keys()))
+        print("МАТЧ:", t1, t2, s1, s2)
+
         if t1 not in teams or t2 not in teams:
             continue
 
+        # голы
         teams[t1]["голы"] += s1
         teams[t2]["голы"] += s2
 
+        # очки и результаты
         if s1 > s2:
             teams[t1]["очки"] += 3
             teams[t1]["победы"] += 1
@@ -71,8 +79,10 @@ def recalc_table(year):
             teams[t1]["ничьи"] += 1
             teams[t2]["ничьи"] += 1
 
+    # сохранить обновлённые данные
     for name, stats in teams.items():
         db.collection("teams").document(f"{year}_{name}").set(stats, merge=True)
+
 
 @app.route("/")
 def home():
