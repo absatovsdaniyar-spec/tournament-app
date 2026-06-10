@@ -49,7 +49,8 @@ def recalc_table(year):
     for m in db.collection("matches").where("year", "==", year).stream():
         d = m.to_dict()
         t1,t2,s1,s2 = d["t1"],d["t2"],d["s1"],d["s2"]
-
+   print("КОМАНДЫ В БАЗЕ:", list(teams.keys()))
+   print("МАТЧ:", t1, t2)
         if t1 not in teams or t2 not in teams:
             continue
 
